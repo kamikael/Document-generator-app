@@ -1,0 +1,871 @@
+{
+  "name": "transcription_whipers",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload-audio",
+        "options": {}
+      },
+      "id": "18b669b7-5039-4773-b6dd-c8204db9e1cd",
+      "name": "Webhook Audio Upload1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1960,
+        840
+      ],
+      "webhookId": "46b4f7c3-d26e-4dec-b93c-619d492dd07b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"result\",\n  \"data\": {\n    \"status\": \"completed\",\n    \"step\": \"upload\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1680,
+        840
+      ],
+      "id": "fa5c65c5-43ad-4232-bcea-7ba382af9c38",
+      "name": "signal upload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"result\",\n  \"data\": {\n    \"status\": \"completed\",\n    \"step\": \"transcription\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -700,
+        840
+      ],
+      "id": "0d941b2f-83ba-4e2d-a251-9a360e90cfd0",
+      "name": "signal upload1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b658fbed-41dc-41bd-9fa1-f9199296bf43",
+              "leftValue": "={{ $('Webhook Audio Upload1').item.json.body.documentType }}",
+              "rightValue": "Compte rendu",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -264,
+        840
+      ],
+      "id": "6c4c6854-5273-4888-ae04-d4f3c0ed9040",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7dfcc82a-f6b9-4f66-9f20-69aa93326f7d",
+              "leftValue": "={{ $('Webhook Audio Upload1').item.json.body.documentType }}",
+              "rightValue": "Procès verbal",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -44,
+        940
+      ],
+      "id": "154dfd77-ccdd-4d0d-bd1d-8fade46bf5eb",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inputs",
+              "value": "=<|system|>Tu es un assistant expert en synthèse de réunions dans un contexte professionnel.</s><|user|>Voici les informations d’une réunion :\n- Titre : {{ $('Webhook Audio Upload1').item.json.body.meetingTitle }} \n- Date : {{ $('Webhook Audio Upload1').item.json.body.meetingDate }} \n- Objectifs : {{ $('Webhook Audio Upload1').item.json.body.mainObjective }} \n- Ordres du jour : {{ $('Webhook Audio Upload1').item.json.body.ordreJour }}\n- participants: {{ $('Webhook Audio Upload1').item.json.body.participants }}\n- Transcription : {{ $('Extract from File').item.json.data }}  \nInstructions : \n 1. Relis la transcription. Corrige les erreur et Déduis le contexte métier. \n 3. Structure un compte-rendu :    \n    - En-tête    \n    - Objectifs    \n    - Points clés    \n    - Décisions    \n    - Actions    \n    - Points à suivre    \n    - Prochaine réunion \n 4. langue du document: {{ $('Webhook Audio Upload1').item.json.body.language }}\n 5. Formate en Markdown. \n 6. Ajoute une section Hypothèses & Recommandations.\n 7. pas de guillmet</s><|assistant|>"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -44,
+        640
+      ],
+      "id": "72356ffa-76d8-45dd-9e84-c346885633fb",
+      "name": "compte rendu",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "JfCWC6zfw6MXnPz9",
+          "name": "hugginFace4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inputs",
+              "value": "=<|system|>\nTu es un assistant expert en rédaction de procès-verbaux et comptes rendus professionnels pour des réunions d’entreprise. Tu rédiges de façon formelle, structurée et claire.\n\n</s><|user|>\nVoici les informations relatives à la réunion :\n- Titre / Sujet : {{ $('Webhook Audio Upload1').item.json.body.meetingTitle }}\n- Date : {{ $('Webhook Audio Upload1').item.json.body.meetingDate }}\n-langue de readaction:{{ $('Webhook Audio Upload1').item.json.body.language }}\n- Participants(si donné) :{{ $('Webhook Audio Upload1').item.json.body.participants }}\n- Objectifs :{{ $('Webhook Audio Upload1').item.json.body.mainObjective }}\n- Ordre du jour : {{ $('Webhook Audio Upload1').item.json.body.ordreJour }}\nVoici la transcription brute de la réunion (peut contenir de petites erreurs ou imprécisions) : {{ $('Extract from File').item.json.data }}\n\nRédige un procès-verbal professionnel respectant les consignes suivantes :\n1. En-tête : inclure clairement le titre, la date, l’heure, le lieu, la liste des participants, l’animateur, l’ordre du jour.\n2. Résumé exécutif : proposer un court résumé (2-3 phrases) des points principaux.\n3. Déroulé détaillé : pour chaque point d’ordre du jour :\n   - Résumer les échanges de manière synthétique et précise.\n   - Corriger les coquilles ou reformuler les phrases incomplètes si possible.\n   - Si un passage est ambigu ou incomplet dans la transcription, faire une hypothèse raisonnable et signaler « [À clarifier] ».\n   - Mentionner les arguments principaux ou idées clés exprimées.\n4. Décisions : lister clairement les décisions prises.\n5. Actions (action items) : extraire les tâches identifiées, avec description, responsable, échéance ou « À définir ».\n6. Points divers : inclure brièvement toute discussion hors ordre du jour si notée.\n7. Conclusion / Clôture : résumer la fin de la réunion, prochaines étapes, date de la prochaine réunion si connue.\n8. Notes / Incertitudes : à la fin, lister les passages de la transcription jugés peu clairs ou nécessitant relecture.\nFormat de sortie :\n- Utilise une mise en forme claire en Markdown (titres, listes).\n- Sois concis mais exhaustif.\n- Si tu fais une hypothèse pour un passage ambigu, mets-le entre crochets et explique brièvement pourquoi.\nRends-le prêt à envoyer ou archiver, sans commentaires sur la méthode.\n</s><|assistant|>"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        176,
+        840
+      ],
+      "id": "dc5cc588-9686-4388-be4e-19b7fb84b9db",
+      "name": "proces verbale",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "JfCWC6zfw6MXnPz9",
+          "name": "hugginFace4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inputs",
+              "value": "=<|system|>\nTu es un assistant professionnel chargé de rédiger des **notes de réunion claires, synthétiques et exploitables**.</s><|user|>\n### 🧠 Contexte\n- **Langue de rédaction** : {{ $('Webhook Audio Upload1').item.json.body.language }}\n- **titre** :{{ $('Webhook Audio Upload1').item.json.body.meetingTitle }}\n- **ordre du jour** :{{ $('Webhook Audio Upload1').item.json.body.ordreJour }}\n- **Objectifs** :{{ $('Webhook Audio Upload1').item.json.body.mainObjective }}\n- **date**:{{ $('Webhook Audio Upload1').item.json.body.meetingDate }}\n- **participant** :{{ $('Webhook Audio Upload1').item.json.body.participants }}\n- **Transcription fournie** :{{ $('Extract from File').item.json.data }}\n  - Format: markdown\n  - Peut contenir des erreurs de ponctuation, formulations orales, imprécisions\n\n### 📚 Objectif de la tâche\nProduis un **compte rendu structuré** avec les sections suivantes, tout en reformulant et en améliorant le style si nécessaire :\n### 🧾 Structure attendue du compte rendu\n1. ## Résumé global (1 à 3 paragraphes)\n   - Contexte de la réunion\n   - Objectifs et points majeurs abordés\n   - Décisions importantes en résumé\n2. ## Participants\n   - Liste des intervenants (si connue)\n   - Fonctions ou rôles\n   - Présence active ou passive\n3. ## Décisions prises\n   - Décisions explicites ou implicites (validation tacite, consensus)\n   - Détail du contenu, contexte, impacts, échéances si mentionnées\n   - Citer la source (intervenant + horodatage si possible)\n4. ## Actions à mener (tableau recommandé)\n| Action | Responsable | Échéance | Priorité | Statut | Commentaire |\n|--------|-------------|----------|----------|--------|-------------|\n| [Action ici] | [Nom] | [JJ/MM/AAAA] | [Haute/Moyenne/Basse] | [À démarrer/En cours/Terminé] | [Basé sur décision X] |\n   - Si l’action est floue, indique-le clairement : `[Action floue à confirmer]`\n5. ## Points soulevés ou problèmes évoqués\n   - Description du sujet\n   - Contexte ou origine\n   - Intervenants concernés\n   - Proposition de traitement (si discuté)\n6. ## Questions ouvertes / points à clarifier\n   - Éléments restés ambigus ou sans réponse\n   - Propositions pour obtenir clarification (personne à contacter, source à revoir)\n7. ## Date et objectif de la prochaine réunion\n   - Date mentionnée ou indiquer \"non précisée\"\n   - Ordre du jour ou thème annoncé\n8. ## Références et documents associés\n   - Slides, rapports, liens évoqués pendant la réunion\n   - Si absence de détails : indiquer “non précisé”\n9. ## Citations clés (facultatif)\n   - Quelques extraits textuels importants (avec orateur + horodatage si possible)\n10. ## Glossaire / acronymes (facultatif)\n   - Liste des termes techniques ou acronymes\n   - Explications ou signalement des termes non expliqués dans la réunion\n\n### ✍️ Consignes de style\n- Utilise un ton professionnel, neutre et précis\n- Reformule pour la clarté et la grammaire sans déformer le sens\n- Utilise des titres Markdown (`##`, `###`) pour structurer le document\n- Préfère les listes à puces ou les tableaux pour plus de lisibilité\n- Indique la source (horodatage + orateur) pour chaque décision ou citation importante\n- Signale toute imprécision ou contenu flou de manière neutre\n- Si des informations manquent (participants, objectif…), note-le en haut du document\n\n### ✅ En conclusion, propose une check-list de validation :\n1. Responsables clairement identifiés ?\n2. Échéances bien définies ?\n3. Points flous signalés ?\n4. Prochaine réunion planifiée ?\n5. Compte rendu prêt à être partagé ou validé ?\n\n### 📥 Mode d’emploi\n1. Fournir la transcription brute ou structurée\n2. L’IA analyse et rédige selon le format ci-dessus\n3. La sortie est un document Markdown prêt à copier, convertir en PDF ou envoyer par email\n### 📝 Exemple de titre final :\n\\`\\`\\`markdown\n##  {{ $('Webhook Audio Upload1').item.json.body.meetingTitle }}– {{ $('Webhook Audio Upload1').item.json.body.meetingDate }}\n\\`\\`\\`\n### 📝 Transcription:{{ $('Extract from File').item.json.data }}\n</s><|assistant|>"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        176,
+        1040
+      ],
+      "id": "c76e0c38-6282-4006-84da-46ea384a47d5",
+      "name": "note de reunion",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "JfCWC6zfw6MXnPz9",
+          "name": "hugginFace4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"result\",\n  \"data\": {\n    \"status\": \"completed\",\n    \"step\": \"processing\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        396,
+        640
+      ],
+      "id": "c653debd-fca0-48b5-b968-0f89e7943ee7",
+      "name": "processing"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Étape 1 : récupérer le texte généré (ou une chaîne vide)\nconst output = $input.first().json.generated_text || '';\n\n// Étape 2 : définir la balise qui marque le début de la vraie réponse\nconst marker = '<|assistant|>';\n\n// Étape 3 : extraire uniquement la réponse utile\nlet response = output.includes(marker)\n  ? output.split(marker)[1]\n  : output;\n\n// Étape 4 : nettoyer et structurer le contenu\n\n// Convertit les séquences \\n en vrais retours à la ligne\nresponse = response.replace(/\\\\n/g, '\\n');\n// Supprime les espaces en début/fin de chaque ligne\n// et conserve les sauts de ligne multiples (par exemple pour les paragraphes)\nresponse = response\n  .split('\\n')\n  .map(line => line.trim())\n  .join('\\n');\n\n// Remplace plusieurs espaces par un seul (dans les lignes)\nresponse = response\n  .split('\\n')\n  .map(line => line.replace(/ {2,}/g, ' '))\n  .join('\\n');\n\n// Ajoute un espace après chaque point s’il manque\nresponse = response.replace(/\\.([^\\s])/g, '. $1');\n\n// Facultatif : ajoute un saut de ligne après les titres Markdown si oubliés\nresponse = response.replace(/(#+ .+)/g, '\\n$1\\n');\n\n// Nettoie les lignes multiples excessives (plus de 3)\nresponse = response.replace(/\\n{3,}/g, '\\n\\n');\n\n// Supprime les éventuels caractères invisibles\nresponse = response.replace(/[\\u200B-\\u200D\\uFEFF]/g, '');\n\nconst marker2 = \"2. Le contexte métier\";\nconst index = response.indexOf(marker2);\n\nresponse = index !== -1\n  ? response.slice(index)  // Garde \"2. Le contexte métier\" + tout après\n  : response;\n\n\n// Trim global (début et fin de document)\n      response = response.trim()\n\n// Renvoi final formaté\nreturn [{\n  json: {\n    result: response\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        640
+      ],
+      "id": "2307fa9e-7854-4b15-bd9d-18644b1e85bc",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"result\",\n  \"data\": {\n    \"status\": \"completed\",\n    \"step\": \"generation\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        616,
+        640
+      ],
+      "id": "89b40325-a15f-4d60-a25a-6c4c127d7d82",
+      "name": "signal generation"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "result"
+            },
+            {
+              "name": "data",
+              "value": "={{ $('Code').item.json.result }}"
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        836,
+        640
+      ],
+      "id": "80c42320-3900-455f-bf8c-2daab9e7e725",
+      "name": "signal send message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"result\",\n  \"data\": {\n    \"status\": \"completed\",\n    \"step\": \"processing\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        616,
+        840
+      ],
+      "id": "8de68636-267b-4df5-9182-5b9e7de68c90",
+      "name": "processing1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Étape 1 : récupérer le texte généré (ou une chaîne vide)\nconst output = $input.first().json.generated_text || '';\n\n// Étape 2 : définir la balise qui marque le début de la vraie réponse\nconst marker = '<|assistant|>';\n\n// Étape 3 : extraire uniquement la réponse utile\nlet response = output.includes(marker)\n  ? output.split(marker)[1]\n  : output;\n\n// Étape 4 : nettoyer et structurer le contenu\n\n// Convertit les séquences \\n en vrais retours à la ligne\nresponse = response.replace(/\\\\n/g, '\\n');\n// Supprime les espaces en début/fin de chaque ligne\n// et conserve les sauts de ligne multiples (par exemple pour les paragraphes)\nresponse = response\n  .split('\\n')\n  .map(line => line.trim())\n  .join('\\n');\n\n// Remplace plusieurs espaces par un seul (dans les lignes)\nresponse = response\n  .split('\\n')\n  .map(line => line.replace(/ {2,}/g, ' '))\n  .join('\\n');\n\n// Ajoute un espace après chaque point s’il manque\nresponse = response.replace(/\\.([^\\s])/g, '. $1');\n\n// Facultatif : ajoute un saut de ligne après les titres Markdown si oubliés\nresponse = response.replace(/(#+ .+)/g, '\\n$1\\n');\n\n// Nettoie les lignes multiples excessives (plus de 3)\nresponse = response.replace(/\\n{3,}/g, '\\n\\n');\n\n// Supprime les éventuels caractères invisibles\nresponse = response.replace(/[\\u200B-\\u200D\\uFEFF]/g, '');\n\nconst marker2 = \"2. Le contexte métier\";\nconst index = response.indexOf(marker2);\n\nresponse = index !== -1\n  ? response.slice(index)  // Garde \"2. Le contexte métier\" + tout après\n  : response;\n\n\n// Trim global (début et fin de document)\n      response = response.trim()\n\n// Renvoi final formaté\nreturn [{\n  json: {\n    result: response\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        396,
+        840
+      ],
+      "id": "3d44c902-48b5-44ef-8655-09032c0808bb",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"result\",\n  \"data\": {\n    \"status\": \"completed\",\n    \"step\": \"generation\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        836,
+        840
+      ],
+      "id": "5d9173af-5afd-4809-ba1c-f8e1002500f6",
+      "name": "signal generation1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "result"
+            },
+            {
+              "name": "data",
+              "value": "={{ $('Code').item.json.result }}"
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1056,
+        840
+      ],
+      "id": "0addf2c7-3d9d-4f5e-9e18-901cf3f5ec43",
+      "name": "signal send message1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"result\",\n  \"data\": {\n    \"status\": \"completed\",\n    \"step\": \"processing\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        616,
+        1040
+      ],
+      "id": "c9173dc3-23bf-4b55-a744-f2aba82d6eed",
+      "name": "processing2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Étape 1 : récupérer le texte généré (ou une chaîne vide)\nconst output = $input.first().json.generated_text || '';\n\n// Étape 2 : définir la balise qui marque le début de la vraie réponse\nconst marker = '<|assistant|>';\n\n// Étape 3 : extraire uniquement la réponse utile\nlet response = output.includes(marker)\n  ? output.split(marker)[1]\n  : output;\n\n// Étape 4 : nettoyer et structurer le contenu\n\n// Convertit les séquences \\n en vrais retours à la ligne\nresponse = response.replace(/\\\\n/g, '\\n');\n// Supprime les espaces en début/fin de chaque ligne\n// et conserve les sauts de ligne multiples (par exemple pour les paragraphes)\nresponse = response\n  .split('\\n')\n  .map(line => line.trim())\n  .join('\\n');\n\n// Remplace plusieurs espaces par un seul (dans les lignes)\nresponse = response\n  .split('\\n')\n  .map(line => line.replace(/ {2,}/g, ' '))\n  .join('\\n');\n\n// Ajoute un espace après chaque point s’il manque\nresponse = response.replace(/\\.([^\\s])/g, '. $1');\n\n// Facultatif : ajoute un saut de ligne après les titres Markdown si oubliés\nresponse = response.replace(/(#+ .+)/g, '\\n$1\\n');\n\n// Nettoie les lignes multiples excessives (plus de 3)\nresponse = response.replace(/\\n{3,}/g, '\\n\\n');\n\n// Supprime les éventuels caractères invisibles\nresponse = response.replace(/[\\u200B-\\u200D\\uFEFF]/g, '');\n\nconst marker2 = \"2. Le contexte métier\";\nconst index = response.indexOf(marker2);\n\nresponse = index !== -1\n  ? response.slice(index)  // Garde \"2. Le contexte métier\" + tout après\n  : response;\n\n\n// Trim global (début et fin de document)\n      response = response.trim()\n\n// Renvoi final formaté\nreturn [{\n  json: {\n    result: response\n  }\n}];\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        396,
+        1040
+      ],
+      "id": "236c96b4-0d7d-4684-aec8-79402a3e857b",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"result\",\n  \"data\": {\n    \"status\": \"completed\",\n    \"step\": \"generation\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        836,
+        1040
+      ],
+      "id": "223a8ff7-1a94-4bc4-84ba-44ad0baa520c",
+      "name": "signal generation2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.ably.io/channels/echo/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Sm10QUNRLl9GNi0yUTo4S3RBcTFjU2lnUFlqUmtZRW5iN0VLdzlQY1JJNWZScTR6bkJxRFNJSm5n"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "result"
+            },
+            {
+              "name": "data",
+              "value": "={{ $('Code').item.json.result }}"
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1056,
+        1040
+      ],
+      "id": "5157b531-f913-42b3-bb2b-3974390b84f2",
+      "name": "signal send message2"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "87lll",
+              "inputDataFieldName": "audioFile"
+            },
+            {
+              "name": "name",
+              "value": "whisper-1"
+            },
+            {
+              "name": "language",
+              "value": "fr"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1100,
+        840
+      ],
+      "id": "943ce670-b0bb-46f5-8b4c-81dbaa0a67b7",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VQtiE4PnvYlywYQS",
+          "name": "huggingFace"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Audio Upload1": {
+      "main": [
+        [
+          {
+            "node": "signal upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "signal upload": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "signal upload1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "compte rendu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "proces verbale",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "note de reunion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "compte rendu": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "proces verbale": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "note de reunion": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "processing": {
+      "main": [
+        [
+          {
+            "node": "signal generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "signal generation": {
+      "main": [
+        [
+          {
+            "node": "signal send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "processing1": {
+      "main": [
+        [
+          {
+            "node": "signal generation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "processing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "signal generation1": {
+      "main": [
+        [
+          {
+            "node": "signal send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "processing2": {
+      "main": [
+        [
+          {
+            "node": "signal generation2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "processing2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "signal generation2": {
+      "main": [
+        [
+          {
+            "node": "signal send message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "signal upload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3adc0338-34e7-4c40-911d-a96b755647e1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e559e71e798f519f58c8dd99c967085c85cc3b15f3b1dbd92e89348b58d4b0e1"
+  },
+  "id": "gD0V5r3jS7qBA53V",
+  "tags": []
+}
